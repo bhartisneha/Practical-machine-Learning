@@ -1,1 +1,86 @@
+---
+title: "Practical Machine Learning Project"
+date: "23/08/2021"
+output: html_document
+---
 
+In this project, the data from accelerometers is divided into two sets: training and testing. The goal of the project is to predict the manner in which they did the exercise.
+```{r}
+# Reading the file
+training <- read.csv("G:/Course/PracticalMachineLearning/pml-training.csv")
+dim(training)
+testing <- read.csv("G:/Course/PracticalMachineLearning/pml-testing.csv")
+dim(testing)
+```
+
+Loading the required libraries
+```{r, message=FALSE, warning=FALSE}
+library(caret)
+library(kernlab)
+library(randomForest)
+library(rattle)
+library(lattice)
+```
+Cleaning the dataset
+```{r}
+# Removing NA Value Columns
+training<- training[, colSums(is.na(training)) == 0]
+testing<- testing[, colSums(is.na(testing)) == 0]
+# Remmoving unwanted columns
+training <- training[,-c(1:7)]
+testing <- testing[,-c(1:7)]
+# Removing zero variance columnbs
+nvz <- nearZeroVar(training)
+training <- training[,-nvz]
+dim(training)
+dim(testing)
+```
+
+```{r}
+# Dividing training data into train and test to build the model
+t <- createDataPartition(training$classe, p=0.7, list = FALSE)
+trainData <- training[t,]
+trainTest <- training[-t,]
+# Defining control to be used with  models
+ctrl <- trainControl(method = "cv", number=3 )
+```
+Predicting with trees
+```{r}
+m_trees <- train(classe~., method="rpart", data=trainData, trControl=ctrl)
+p_trees <- predict(m_trees, trainTest)
+confusionMatrix(p_trees, factor(trainTest$classe))
+plot(m_trees)
+```
+Predicting with Support Vector Machine
+```{r}
+m_svm <- train(classe~., method="svmLinear", data=trainData, trControl = ctrl, tuneLength = 5)
+p_svm <- predict(m_svm, trainTest)
+confusionMatrix(p_svm, factor(trainTest$classe))
+# plot(m_svm)
+```
+Predicting with Random Forest
+```{r}
+m_rf <- train(classe~., method="rf", data=trainData, trControl=ctrl)
+p_rf <- predict(m_rf, trainTest)
+confusionMatrix(p_rf, factor(trainTest$classe))
+plot(m_rf)
+```
+Predicting with 
+```{r, results='hide'}
+m_gbm <- train(classe~., data=trainData, method="gbm", trControl = ctrl)
+```
+```{r}
+p_gbm <- predict(m_gbm, trainTest)
+confusionMatrix(p_gbm, factor(trainTest$classe))
+plot(m_gbm)
+```
+
+## Result
+From all the above models, we can see that the best prediction is given by Random Forest.
+Accuracy = 0.9924 and Out of Sample Error = 0.0076
+
+Using Random Forest Model to predict the values on test dataset as provided
+```{r}
+p <- predict(m_rf, testing)
+print(p)
+```
